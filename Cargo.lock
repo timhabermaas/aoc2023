@@ -6,8 +6,15 @@ version = 3
 name = "aoc2023"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "serde_json",
 ]
+
+[[package]]
+name = "itertools"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa9f5fa6ac2d5de35beb97ccf6cdf7258104ec8327e6c0fce1d44f78862e0b0c"
 
 [[package]]
 name = "itoa"
