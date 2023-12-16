@@ -54,13 +54,14 @@ fn parse_input(input: &str) -> Grid {
     };
 
     for (y, line) in input.lines().enumerate() {
-        for (key, group) in line.chars().enumerate().group_by(|(_x, c)| match c {
+        for (key, group) in &line.chars().enumerate().group_by(|(_x, c)| match c {
             digit if digit.is_ascii_digit() => 1,
             '.' => 2,
             _ => 3,
         }) {
             match key {
                 1 => {
+                    let group = group.collect::<Vec<_>>();
                     let number: u32 = group
                         .iter()
                         .map(|(_x, d)| d.to_digit(10).unwrap())
@@ -74,8 +75,8 @@ fn parse_input(input: &str) -> Grid {
                 }
                 2 => continue,
                 3 => {
-                    for (x, symbol) in group.iter() {
-                        grid.symbols.push((*symbol, *x, y));
+                    for (x, symbol) in group {
+                        grid.symbols.push((symbol, x, y));
                     }
                 }
                 _ => panic!("can't happen"),
