@@ -57,11 +57,9 @@ fn last_digit(s: &str) -> u32 {
 fn main() {
     let input = read_to_string("inputs/day01.txt").expect("file not found");
 
-    /*
     let numbers: Vec<u32> = input
         .lines()
         .map(|c| {
-            println!("{c}");
             let digits = c.chars().filter(|c| c.is_ascii_digit());
             let first = digits.clone().next().unwrap();
             let last = digits.last().unwrap();
@@ -72,15 +70,13 @@ fn main() {
         })
         .collect();
 
-    println!("Part 1: {}", numbers.iter().sum::<u32>());*/
+    println!("Part 1: {}", numbers.iter().sum::<u32>());
 
     let mut result: Vec<u32> = vec![];
 
     for line in input.lines() {
-        println!("{line}");
         let first = first_digit(line);
         let last = last_digit(line);
-        println!("{}, {}", first, last);
         result.push(first * 10 + last);
     }
 
