@@ -2,28 +2,6 @@ use itertools::Itertools;
 use std::{fs::read_to_string, str::FromStr};
 
 #[derive(Debug, Copy, Clone)]
-enum Rounding {
-    Ceil,
-    Floor,
-}
-
-impl Rounding {
-    fn apply(&self, number: f64) -> i64 {
-        match self {
-            Rounding::Ceil => number.ceil() as i64,
-            Rounding::Floor => number.floor() as i64,
-        }
-    }
-
-    fn flip(&self) -> Rounding {
-        match self {
-            Rounding::Ceil => Rounding::Floor,
-            Rounding::Floor => Rounding::Ceil,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
 enum Direction {
     L,
     R,
@@ -212,7 +190,7 @@ impl Puzzle {
         }
     }
 
-    fn points(&self) -> Vec<(i64, i64)> {
+    fn inner_points(&self) -> Vec<(f64, f64)> {
         let mut inner_points = Vec::with_capacity(self.instructions.len() + 1);
         let mut current_pos: (f64, f64) = (0.5, 0.5);
         inner_points.push(current_pos);
@@ -220,65 +198,52 @@ impl Puzzle {
         // In order to calclulate the area of the polygon we need to know the outline. When
         // starting at the center of a block and moving from center to center we might miss some
         // area. In order to avoid that we start at (0.5, 0.5) which can be interpreted as "center
-        // of block". By later rounding either up or down for each corner we find the correct
-        // outline. The outline also depends on whether we walk clockwise or counter-clockwise.
+        // of block". By later adding the missed quarter blocks we can regain the missed are.
 
-        for first in self.instructions.iter().take(self.instructions.len() - 1) {
-            current_pos = first.move_from(current_pos);
+        for instruction in self.instructions.iter().take(self.instructions.len() - 1) {
+            current_pos = instruction.move_from(current_pos);
 
             inner_points.push(current_pos);
         }
 
-        fn rounding_of_corner(
-            from: Direction,
-            to: Direction,
-            rotation: Rotation,
-        ) -> (Rounding, Rounding) {
-            use Direction::*;
-            use Rounding::*;
-            let result = match (from, to) {
-                (L, U) => (Floor, Ceil),
-                (L, D) => (Ceil, Ceil),
-                (R, U) => (Floor, Floor),
-                (R, D) => (Ceil, Floor),
-                (U, L) => (Floor, Ceil),
-                (U, R) => (Floor, Floor),
-                (D, L) => (Ceil, Ceil),
-                (D, R) => (Ceil, Floor),
-                _ => panic!("impossible combination {:?} {:?}", from, to),
-            };
-            if rotation == Rotation::CCW {
-                (result.0.flip(), result.1.flip())
-            } else {
-                result
-            }
-        }
-
-        let rotation = self.path_direction();
-        // Get from the middle of the blocks to its outline.
-        let outer_points = inner_points
-            .iter()
-            .zip(self.corners())
-            .map(|(point, corner)| {
-                let (rounding_x, rounding_y) = rounding_of_corner(corner.0, corner.1, rotation);
-                (rounding_x.apply(point.0), rounding_y.apply(point.1))
-            })
-            .collect();
-
-        outer_points
+        inner_points
     }
 
     fn enclosed_area(&self) -> i64 {
-        // Using https://en.wikipedia.org/wiki/Shoelace_formula#Trapezoid_formula_2 to calculate
-        // the area of the rectilinear polygon.
-        let area: i64 = self
-            .points()
+        let inner_area: f64 = self
+            .inner_points()
             .iter()
             .tuple_windows()
             .map(|(old_point, new_point)| (old_point.1 + new_point.1) * (old_point.0 - new_point.0))
             .sum();
+        let inner_area = (inner_area.abs().round() as i64) / 2;
 
-        area.abs() / 2
+        let mut straight_area: i64 = 0;
+        for instruction in self.instructions.iter() {
+            // We only care about the straights betwen corners, so remove the last step into the
+            // next corner.
+            straight_area += instruction.steps as i64 - 1;
+        }
+
+        // For each corner we're either missing a quarter or three quarter of the area, depending
+        // on whether the enclosed area is inside or outside.
+        let mut corner_area: f64 = 0.0;
+        for (from, to) in self.corners() {
+            // If the entire loop is CW, for each CW turn we miss 3/4 and for each CCW turn we miss
+            // 1/4 of area.
+            let mut outer_area = match from.rotation(to) {
+                Rotation::CW => 0.75,
+                Rotation::CCW => 0.25,
+            };
+            // In case the loop is CCW we swap 3/4 and 1/4.
+            if self.path_direction() == Rotation::CCW {
+                outer_area = 1.0 - outer_area;
+            }
+            corner_area += outer_area;
+        }
+        let corner_area = corner_area.round() as i64;
+
+        inner_area + (straight_area / 2) + corner_area
     }
 }
 
