@@ -112,7 +112,7 @@ struct Instruction {
 }
 
 impl Instruction {
-    fn move_foo_f(&self, start: (f64, f64)) -> (f64, f64) {
+    fn move_from(&self, start: (f64, f64)) -> (f64, f64) {
         let (x, y) = self.direction.vec();
 
         let steps = self.steps as i32;
@@ -223,8 +223,8 @@ impl Puzzle {
         // of block". By later rounding either up or down for each corner we find the correct
         // outline. The outline also depends on whether we walk clockwise or counter-clockwise.
 
-        for (ref first, _) in self.instructions.iter().tuple_windows() {
-            current_pos = first.move_foo_f(current_pos);
+        for first in self.instructions.iter().take(self.instructions.len() - 1) {
+            current_pos = first.move_from(current_pos);
 
             inner_points.push(current_pos);
         }
